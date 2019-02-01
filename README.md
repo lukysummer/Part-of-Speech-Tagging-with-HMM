@@ -14,7 +14,7 @@
 For training set of 928,458 words and test set of 232,734 words, resulting HMM model yielded **training accuracy of 97.54%** and **test accuracy of 96.02%**.
 
 
-Here is a sample of a sentence with some incorrect predicted tags:
+Here is a sample of a sentence with some incorrectly predicted tags:
 
 
 <img src="images/result.png">
