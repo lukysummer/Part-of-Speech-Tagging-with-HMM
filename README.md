@@ -1,6 +1,6 @@
 # Part-of-Speech Tagging with Hidden Markov Model using pomegranate library
 
-<p align="center"><img src="HMM.png" height = "256"></p>
+<p align="center"><img src="images/HMM.png" height = "256"></p>
 
 This is my implementation of Part-of-Speech Tagging with Hidden Markov Model (HMM), using pomegranate library that enables constructing a hidden markov model with
 hidden states and correspoding transition and emission probabilites. The final part-of-speech predictions for each word in the corpus was done using viterbi path
@@ -16,7 +16,7 @@ For training set of 928,458 words and test set of 232,734 words, resulting HMM m
 Here is a sample of a sentence with some incorrect tag labels :
 
 
-<img src="result.png">
+<img src="images/result.png">
 
 It can be seen that although the two underlined tags were incorrectly predicted , if we look at the surrounding predictions ('DET', 'NOUN', 'VERB', 'PRON')
 in the yellow square, the sequence actually makes sense if we look at it by itself. We can match expressions with correspoding tags, 
