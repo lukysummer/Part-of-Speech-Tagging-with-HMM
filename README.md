@@ -2,9 +2,10 @@
 
 <p align="center"><img src="images/HMM.png" height = "256"></p>
 
-This is my implementation of Part-of-Speech Tagging with Hidden Markov Model (HMM), using pomegranate library that enables constructing a hidden markov model with
-hidden states and correspoding transition and emission probabilites. The final part-of-speech predictions for each word in the corpus was done using viterbi path
-algorithm.
+*This is my implementation of Part-of-Speech Tagging with Hidden Markov Model (HMM), using **pomegranate library** that enables constructing a hidden markov model with hidden states and correspoding transition and emission probabilites. 
+
+***Brown Corpus** containing ~53,000 sentences including ~1,160,000 words was used as input data. 
+*The final part-of-speech predictions for each word in the corpus was done using **viterbi path** algorithm.
 
 
 
