@@ -86,9 +86,9 @@ class Subset(namedtuple("BaseSet", "sentences keys vocab X tagset Y")):
         return iter(self.sentences.items())
     
     
-data = Dataset("tags-universal.txt", "test.txt")
+data = Dataset("tags-universal.txt", "brown-universal.txt")
 print("Training set has {} sentences.".format(len(data.training_set.keys)))
-print("Test set has {} sentences.".format(len(data.test_set.keys)))
+print("Test set has {} sentences.\n".format(len(data.test_set.keys)))
 
 
 ################ 2. COUNT NUMBER OF EACH TAG IN ENTIRE CORPUS #################
@@ -102,11 +102,17 @@ single_tag_counts = dict(Counter(all_tags))
 ####################  pair_tag_counts[(tag_1, tag_2)] = k  ####################
 sentences = [s for s in all_sentences if len(s) > 1]  # discard any sequences of length 1
 pairs = []
-for seq in sentences:
-    pairs.extend([(seq[i-1], seq[i]) for i in range(1, len(seq))])
+for s in sentences:
+    pairs.extend([(s[i-1], s[i]) for i in range(1, len(s))])
 
 pair_tag_counts = dict(Counter(pairs))
 
+if len(pair_tag_counts) < len(data.training_set.tagset)**2:
+    for tag1 in data.training_set.tagset:
+        for tag2 in data.training_set.tagset:
+            if (tag1, tag2) not in pair_tag_counts:
+                pair_tag_counts[(tag1, tag2)] = 0
+                
 
 ## 4. COUNT NUMBER OF EACH TAG APPEARING IN THE BEGINNING or END OF SENTENCE ##
 #########################  start_tag_counts[tag] = k  #########################
@@ -138,7 +144,7 @@ for sentence_idx, sentence in enumerate(data.training_set.Y):
         
 ############################# 6. BUILD HMM MODEL ##############################
 HMM_model = HiddenMarkovModel(name = "HMM-Tagger")
-tag_states = []
+tag_states = []  # state for each tag
 
 ################# (6.1) ADD STATES w/ EMISSION PROBABILITIES ##################
 ''' 
@@ -147,7 +153,7 @@ tag_emissions: P(word_i|tag_j)
              = C((word_i, tag_j) pairs)/C(tag_j)
 '''
 for tag in data.training_set.tagset:
-    tag_emissions = DiscreteDistribution({word:pair_counts[tag]/single_tag_counts[tag] \
+    tag_emissions = DiscreteDistribution({word:pair_counts[tag][word]/single_tag_counts[tag] \
                                           for word in data.training_set.vocab})
     tag_state = State(tag_emissions, name = tag)
     tag_states.append(tag_state)
@@ -162,11 +168,12 @@ P(tag_2|tag_1) = P(tag_1, tag_2)/P(tag_1) = C((word_1, tag_2) pairs)/C(tag_1)
 '''
 n_sentences = len(data.training_set.keys)
 
-for tag1 in tag_states:
-    for tag2 in tag_states:
-        HMM_model.add_transitions(HMM_model.start, tag1, start_tag_counts[tag1]/n_sentences)
-        HMM_model.add_transitions(tag1, HMM_model.end, end_tag_counts[tag1]/single_tag_counts[tag1])
-        HMM_model.add_transitions(tag1, tag2, pair_tag_counts[(tag1,tag2)]/single_tag_counts[tag1])
+for tag_state1 in tag_states:
+    for tag_state2 in tag_states:
+        tag1, tag2 = tag_state1.name, tag_state2.name
+        HMM_model.add_transition(HMM_model.start, tag_state1, start_tag_counts[tag1]/n_sentences)
+        HMM_model.add_transition(tag_state1, HMM_model.end, end_tag_counts[tag1]/single_tag_counts[tag1])
+        HMM_model.add_transition(tag_state1, tag_state2, pair_tag_counts[(tag1,tag2)]/single_tag_counts[tag1])
     
 HMM_model.bake()    
     
@@ -174,7 +181,7 @@ HMM_model.bake()
 #################### 7. MAKE PREDICTIONS ON TRAININING SET ####################
 train_correct = 0 # number of correct predictions so far
 train_count = 0   # number of predictions so far
-print_i = 0
+print_i = 100
 
 ### ITERATE PER SENTENCE
 for words, true_tags in zip(data.training_set.X, data.training_set.Y):
@@ -182,11 +189,13 @@ for words, true_tags in zip(data.training_set.X, data.training_set.Y):
         # Viterbi Path: most likely sequence of STATES that generated the sequence given  
         _, viterbi_path = HMM_model.viterbi([w for w in words])
         predicted_tags = [state[1].name for state in viterbi_path[1:-1]] 
-        train_correct += sum(pred == true for pred, true in zip(viterbi_path, true_tags))
-        if print_i == 0: # print a sample result
-            print(words)
+        train_correct += sum(pred == true for pred, true in zip(predicted_tags, true_tags))
+        
+        if print_i == 100: # print a sample result
+            print("Training Sentence: \n", words)
             print()
             print("Predicted Tags: \n", predicted_tags)
+            print()
             print("True Tags: \n", true_tags)
             print_i += 1
     except:
@@ -194,7 +203,9 @@ for words, true_tags in zip(data.training_set.X, data.training_set.Y):
     train_count += len(words)
 
 train_acc = train_correct/train_count
-print("Training Accuracy: {:.2f}%".format(100 * train_acc))
+print("\nTraining Accuracy: {:.2f}%".format(100 * train_acc))
+print()
+print()
     
     
 ####################### 8. MAKE PREDICTIONS ON TEST SET #######################
@@ -207,11 +218,13 @@ for words, true_tags in zip(data.test_set.X, data.test_set.Y):
         # Only consider words contained in training set's vocab
         _, viterbi_path = HMM_model.viterbi([w if w in data.training_set.vocab else 'nan' for w in words])
         predicted_tags = [state[1].name for state in viterbi_path[1:-1]] 
-        test_correct += sum(pred == true for pred, true in zip(viterbi_path, true_tags))
-        if print_i == 1: # print a sample result
-            print(words)
+        test_correct += sum(pred == true for pred, true in zip(predicted_tags, true_tags))
+        
+        if print_i == 101: # print a sample result
+            print("Test Sentence: \n", words)
             print()
             print("Predicted Tags: \n", predicted_tags)
+            print()
             print("True Tags: \n", true_tags)
             print_i += 1
     except:
@@ -219,4 +232,4 @@ for words, true_tags in zip(data.test_set.X, data.test_set.Y):
     test_count += len(words)
 
 test_acc = test_correct/test_count
-print("Test Accuracy: {:.2f}%".format(100 * test_acc))
+print("\nTest Accuracy: {:.2f}%".format(100 * test_acc))
